@@ -1,0 +1,71 @@
+name: Fuzzer
+
+on:
+  # Run the fuzzer every day at 02:12 UTC
+  # schedule:
+  #   - cron: '12 02 * * *'
+
+  # Run the fuzzer on push to main
+  push:
+    branches:
+      - main
+
+  # Run the fuzzer manually
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: |
+          Time to run the fuzzer using go duration format (e.g. 3h30m).
+          GitHub hosted runnes can't run for more than 6 hours:
+          https://docs.github.com/en/actions/administering-github-actions/usage-limits-billing-and-administration#usage-limits
+        default: '4h'
+        type: string
+
+# Cancel runs if a new run is triggered on the same branch/commit
+concurrency:
+  group: fuzz-${{ github.ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  list:
+    name: List fuzz targets
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+      - uses: Andrew-Morozko/go-fuzz-list
+        id: list-targets
+    outputs:
+      targets: ${{steps.list-targets.outputs.targets}}
+
+  fuzz:
+    name: ${{ matrix.target.packageRelative }}/${{ matrix.target.func }}
+    needs: list
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{fromJson(needs.list.outputs.targets)}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+      - name: Fuzz
+        uses: Andrew-Morozko/go-fuzz
+        with:
+          func: ${{ matrix.target.func }}
+          package: ${{ matrix.target.package }}
+          # Set the fuzz times for different events (no more than 6 hours on GitHub hosted runners)
+          # fuzztime:  ${{ (github.event_name == 'schedule' && '4h') || (github.event_name == 'workflow_dispatch' && inputs.fuzztime) || '30m' }}
+          fuzztime: 5s
+
+
+
+
