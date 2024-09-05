@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "stable"
-      - uses: Andrew-Morozko/go-fuzz-list@89132dbfc87ba34a03dc7c71004ee254ecd1b390
+      - uses: Andrew-Morozko/go-fuzz-list@v1
         id: list-targets
     outputs:
       targets: ${{steps.list-targets.outputs.targets}}
@@ -58,7 +58,7 @@ jobs:
         with:
           go-version: "stable"
       - name: Fuzz
-        uses: Andrew-Morozko/go-fuzz@8b8a87b233063f37c9952afe4966aa9fa4bffe61
+        uses: Andrew-Morozko/go-fuzz@v1
         with:
           func: ${{ matrix.target.func }}
           package: ${{ matrix.target.package }}
